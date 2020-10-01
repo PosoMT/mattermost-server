@@ -1383,6 +1383,7 @@ type EmailSettings struct {
 	ConnectionSecurity                *string `access:"environment,write_restrictable"`
 	SendPushNotifications             *bool   `access:"environment"`
 	PushNotificationServer            *string `access:"environment"`
+	PushNotificationToken             *string `access:"environment"`// ASGDU Added by PB ASGDU Authorization: Bearer [PushNotificationToken]
 	PushNotificationContents          *string `access:"site"`
 	PushNotificationBuffer            *int
 	EnableEmailBatching               *bool   `access:"site"`

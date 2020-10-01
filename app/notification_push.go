@@ -4,6 +4,8 @@
 package app
 
 import (
+	"fmt"
+	"encoding/json"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -343,7 +345,7 @@ func (a *App) sendToPushProxy(msg *model.PushNotification, session *model.Sessio
 	)
 
 	dataAsgdu := model.Data{
-		ExtendedData: msg,
+		ExtendedData: *msg,
 	}
 
 	channelAsgdu := model.DeliveryChannel{
@@ -367,7 +369,7 @@ func (a *App) sendToPushProxy(msg *model.PushNotification, session *model.Sessio
 
 	url := strings.TrimRight(*a.Config().EmailSettings.PushNotificationServer, "/") + "/messages/notifications"
 
-	request, err := http.NewRequest("POST", url, strings.NewReader(msg.ToJson()))
+	request, err := http.NewRequest("POST", url, strings.NewReader(msgAsgdu.ToJson()))
 	if err != nil {
 		return err
 	}
@@ -379,9 +381,9 @@ func (a *App) sendToPushProxy(msg *model.PushNotification, session *model.Sessio
 	mlog.Info("Notification TOKEN?", mlog.String("token", *a.Config().EmailSettings.PushNotificationToken))
 
 	a.GetPluginsEnvironment()
-	resp, err := a.HTTPService.MakeClient(true).Do(request)
+	resp, err := a.HTTPService().MakeClient(true).Do(request)
 	if err != nil {
-		mlog.Error(fmt.Sprintf("Device push reported as error for UserId=%v SessionId=%v message=%v", session.UserId, session.Id, err.Error()), mlog.String("user_id", sesion.UserId))
+		mlog.Error(fmt.Sprintf("Device push reported as error for UserId=%v SessionId=%v message=%v", session.UserId, session.Id, err.Error()), mlog.String("user_id", session.UserId))
 		return err
 	}
 	
@@ -409,14 +411,14 @@ func (a *App) sendToPushProxy(msg *model.PushNotification, session *model.Sessio
 
 		//Remove
 		if asgduResponse.ErrorCode == 59 {
-			mlog.Info("ASGDU not registered!", mlog.Status("httpStatus", resp.Status))
+			mlog.Info("ASGDU not registered!", mlog.String("httpStatus", resp.Status))
 			a.AttachDeviceId(session.Id, "", session.ExpiresAt)
 			a.ClearSessionCacheForUser(session.UserId)
 			return errors.New("Device was reported as removed")
 		}
 
 		//Fail
-		return errors.New(asgdu.ErrorMessage)
+		return errors.New(asgduResponse.ErrorMessage)
 	}
 
 	return nil
