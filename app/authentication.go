@@ -10,6 +10,13 @@ import (
 	"github.com/mattermost/mattermost-server/v5/model"
 	"github.com/mattermost/mattermost-server/v5/services/mfa"
 	"github.com/mattermost/mattermost-server/v5/utils"
+
+	"crypto/tls"
+	"fmt"
+
+	"gopkg.in/ldap.v2"
+
+	"github.com/mattermost/mattermost-server/v5/mlog"
 )
 
 type TokenLocation int
@@ -112,7 +119,49 @@ func (a *App) DoubleCheckPassword(user *model.User, password string) *model.AppE
 	return nil
 }
 
+func dialLdap(a *App, adress string) (*ldap.Conn, error) {
+	tlsConfig := &tls.Config{InsecureSkipVerify: true}
+	l, err := ldap.DialTLS("tcp", fmt.Sprintf("%s:%d", adress, *a.Config().LdapSettings.LdapPort), tlsConfig)
+	return l, err
+}
+
 func (a *App) checkUserPassword(user *model.User, password string) *model.AppError {
+	//Если у нас роль - сервисный пользователь
+	if !strings.Contains(user.Roles, "service_user") {
+
+		mlog.Warn("Checking user passord")
+
+		servers := strings.Split(*a.Config().LdapSettings.LdapServer, ",")
+
+		var err error
+		var l *ldap.Conn
+
+		//Найдем сервер LDAP
+		for _, adress := range servers {
+			l, err = dialLdap(a, adress)
+			if err == nil {
+				defer l.Close()
+				break
+			}
+		}
+
+		if err != nil {
+			return model.NewAppError("checkUserPassword", "Cann't connect LDAP", nil, "user_id"+user.Id, http.StatusUnauthorized)
+		}
+
+		mlog.Warn("Dialed to LDAP.")
+
+		//Проверим пользовательский пароль в LDAP
+		err = l.Bind(*a.Config().LdapSettings.Domain+"\\"+user.Username, password)
+		if err != nil {
+			return model.NewAppError("checkUserPassword", "Invalid credentials", nil, "user_id"+user.Id, http.StatusUnauthorized)
+		}
+
+		//Все в порядке
+		return nil
+	}
+
+	//Обычная проверка - это работает если есть роль "service_user"
 	if !model.ComparePassword(user.Password, password) {
 		return model.NewAppError("checkUserPassword", "api.user.check_user_password.invalid.app_error", nil, "user_id="+user.Id, http.StatusUnauthorized)
 	}

@@ -342,28 +342,83 @@ func (a *App) sendToPushProxy(msg *model.PushNotification, session *model.Sessio
 		mlog.String("status", model.PUSH_SEND_PREPARE),
 	)
 
-	url := strings.TrimRight(*a.Config().EmailSettings.PushNotificationServer, "/") + model.API_URL_SUFFIX_V1 + "/send_push"
+	dataAsgdu := model.Data{
+		ExtendedData: msg,
+	}
+
+	channelAsgdu := model.DeliveryChannel{
+		ServerChannelID:         "channel_mattermost_android",      //TODO: from config
+		DeliveryChannelUniqueID: msg.Platform + ":" + msg.DeviceId, //Combine back
+		Data:                    dataAsgdu,
+	}
+
+	// 07.11.2019 fix ios TODO: Проверить что это не исправлено в плагине
+	if strings.HasPrefix(msg.Platform, "apple") {
+		channelAsgdu.ServerChannelID = "channel_mattermost_ios"
+	}
+
+	msgAsgdu := model.PushNotificationASGDU{
+		MessageID:       model.NewId(),
+		From:            "ext_system_mattermost",
+		To:              session.UserId,
+		Category:        "category_mattermost",
+		DeliveryChannel: channelAsgdu,
+	}
+
+	url := strings.TrimRight(*a.Config().EmailSettings.PushNotificationServer, "/") + "/messages/notifications"
+
 	request, err := http.NewRequest("POST", url, strings.NewReader(msg.ToJson()))
 	if err != nil {
 		return err
 	}
 
-	resp, err := a.Srv().pushNotificationClient.Do(request)
+	//ASGDU headers
+	request.Header.Add("Authorization", "Bearer "+*a.Config().EmailSettings.PushNotificationToken)
+	request.Header.Add("Content-Type", "application/json")
+
+	mlog.Info("Notification TOKEN?", mlog.String("token", *a.Config().EmailSettings.PushNotificationToken))
+
+	a.GetPluginsEnvironment()
+	resp, err := a.HTTPService.MakeClient(true).Do(request)
 	if err != nil {
+		mlog.Error(fmt.Sprintf("Device push reported as error for UserId=%v SessionId=%v message=%v", session.UserId, session.Id, err.Error()), mlog.String("user_id", sesion.UserId))
 		return err
 	}
+	
 	defer resp.Body.Close()
-
-	pushResponse := model.PushResponseFromJson(resp.Body)
-
-	switch pushResponse[model.PUSH_STATUS] {
-	case model.PUSH_STATUS_REMOVE:
-		a.AttachDeviceId(session.Id, "", session.ExpiresAt)
-		a.ClearSessionCacheForUser(session.UserId)
-		return errors.New("Device was reported as removed")
-	case model.PUSH_STATUS_FAIL:
-		return errors.New(pushResponse[model.PUSH_STATUS_ERROR_MSG])
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println("Error getting ASGDU response")
+		fmt.Println(err)
+		return err
 	}
+
+	var asgduResponse model.ResponseASGDU
+
+	if err:= json.Unmarshal([]byte(body), &asgduResponse); err != nil {
+		fmt.Println(err)
+	}
+
+	mlog.Info("ASGDU status", mlog.String("httpStatus", resp.Status))
+	b, _ := json.Marshal(asgduResponse)
+
+	if resp.StatusCode != http.StatusOK {
+		mlog.Error("ASGDU error",
+			mlog.String("httpStatus", resp.Status),
+			mlog.String("asgduStatus", string(b)))
+
+		//Remove
+		if asgduResponse.ErrorCode == 59 {
+			mlog.Info("ASGDU not registered!", mlog.Status("httpStatus", resp.Status))
+			a.AttachDeviceId(session.Id, "", session.ExpiresAt)
+			a.ClearSessionCacheForUser(session.UserId)
+			return errors.New("Device was reported as removed")
+		}
+
+		//Fail
+		return errors.New(asgdu.ErrorMessage)
+	}
+
 	return nil
 }
 

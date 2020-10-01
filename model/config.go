@@ -1910,6 +1910,7 @@ type LdapSettings struct {
 	// Basic
 	Enable             *bool   `access:"authentication"`
 	EnableSync         *bool   `access:"authentication"`
+	Domain             *string `access:"authentication"`
 	LdapServer         *string `access:"authentication"`
 	LdapPort           *int    `access:"authentication"`
 	ConnectionSecurity *string `access:"authentication"`

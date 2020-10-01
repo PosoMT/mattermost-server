@@ -153,7 +153,7 @@ func updateConfig(c *Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	auditRec.Success()
-	c.LogAudit("updateConfig")
+	c.LogAudit("updateConfig. notification: " + *cfg.EmailSettings.PushNotificationContents)
 
 	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 	w.Write([]byte(cfg.ToJson()))
