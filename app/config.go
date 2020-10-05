@@ -24,6 +24,7 @@ import (
 	"github.com/mattermost/mattermost-server/v5/mlog"
 	"github.com/mattermost/mattermost-server/v5/model"
 	"github.com/mattermost/mattermost-server/v5/utils"
+	"github.com/mattermost/mattermost-server/v5/security"
 )
 
 const (
@@ -31,7 +32,10 @@ const (
 )
 
 func (s *Server) Config() *model.Config {
-	return s.configStore.Get()
+	m := s.configStore.Get()
+	*m.SqlSettings.DataSource, _ = security.Decrypt(*m.SqlSettings.DataSource)
+	
+	return m
 }
 
 func (a *App) Config() *model.Config {
@@ -49,6 +53,7 @@ func (a *App) EnvironmentConfig() map[string]interface{} {
 func (s *Server) UpdateConfig(f func(*model.Config)) {
 	old := s.Config()
 	updated := old.Clone()
+
 	f(updated)
 	if _, err := s.configStore.Set(updated); err != nil {
 		mlog.Error("Failed to update config", mlog.Err(err))
@@ -398,8 +403,9 @@ func (a *App) GetEnvironmentConfig() map[string]interface{} {
 }
 
 // SaveConfig replaces the active configuration, optionally notifying cluster peers.
-func (s *Server) SaveConfig(newCfg *model.Config, sendConfigChangeClusterMessage bool) *model.AppError {
+func (s *Server) SaveConfig(newCfg *model.Config, sendConfigChangeClusterMessage bool) *model.AppError {	
 	oldCfg, err := s.configStore.Set(newCfg)
+
 	if errors.Cause(err) == config.ErrReadOnlyConfiguration {
 		return model.NewAppError("saveConfig", "ent.cluster.save_config.error", nil, err.Error(), http.StatusForbidden)
 	} else if err != nil {

@@ -12,7 +12,7 @@ import (
 	"path/filepath"
 
 	"github.com/pkg/errors"
-
+	"github.com/mattermost/mattermost-server/v5/security"
 	"github.com/mattermost/mattermost-server/v5/mlog"
 	"github.com/mattermost/mattermost-server/v5/model"
 	"github.com/mattermost/mattermost-server/v5/utils/fileutils"
@@ -39,6 +39,7 @@ type FileStore struct {
 // If watch is true, any external changes to the file will force a reload.
 func NewFileStore(path string, watch bool) (fs *FileStore, err error) {
 	resolvedPath, err := resolveConfigFilePath(path)
+	mlog.Info("file.NewFileStore")
 	if err != nil {
 		return nil, err
 	}
@@ -105,6 +106,7 @@ func (fs *FileStore) resolveFilePath(name string) string {
 
 // Set replaces the current configuration in its entirety and updates the backing store.
 func (fs *FileStore) Set(newCfg *model.Config) (*model.Config, error) {
+	mlog.Info("file.Set")
 	return fs.commonStore.set(newCfg, true, func(cfg *model.Config) error {
 		if *fs.config.ClusterSettings.Enable && *fs.config.ClusterSettings.ReadOnlyConfig {
 			return ErrReadOnlyConfiguration
@@ -116,7 +118,10 @@ func (fs *FileStore) Set(newCfg *model.Config) (*model.Config, error) {
 
 // persist writes the configuration to the configured file.
 func (fs *FileStore) persist(cfg *model.Config) error {
+	mlog.Info("file.persist")
 	fs.stopWatcher()
+
+	*cfg.SqlSettings.DataSource, _ = security.Encrypt(*cfg.SqlSettings.DataSource)
 
 	b, err := marshalConfig(cfg)
 	if err != nil {
@@ -139,6 +144,7 @@ func (fs *FileStore) persist(cfg *model.Config) error {
 
 // Load updates the current configuration from the backing store.
 func (fs *FileStore) Load() (err error) {
+	mlog.Info("file.Load")
 	var needsSave bool
 	var f io.ReadCloser
 
@@ -189,6 +195,7 @@ func (fs *FileStore) GetFilePath(name string) string {
 
 // SetFile sets or replaces the contents of a configuration file.
 func (fs *FileStore) SetFile(name string, data []byte) error {
+	mlog.Info("file.SetFile")
 	resolvedPath := fs.resolveFilePath(name)
 
 	err := ioutil.WriteFile(resolvedPath, data, 0600)

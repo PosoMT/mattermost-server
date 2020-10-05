@@ -58,6 +58,13 @@ func createPost(c *Context, w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	channel, err := c.App.GetChannel(post.ChannelId)
+	if channel.Type == model.CHANNEL_OPEN {
+		if !c.App.SessionHasPermissionToChannel(*c.App.Session(), post.ChannelId, model.PERMISSION_MANAGE_CHANNEL_ROLES) {
+			hasPermission = false
+		}
+	}
+
 	if !hasPermission {
 		c.SetPermissionError(model.PERMISSION_CREATE_POST)
 		return
