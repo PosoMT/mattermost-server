@@ -126,10 +126,11 @@ func dialLdap(a *App, adress string) (*ldap.Conn, error) {
 }
 
 func (a *App) checkUserPassword(user *model.User, password string) *model.AppError {
+	mlog.Info("checkUserPassword")
 	//Если у нас роль - сервисный пользователь
 	if !strings.Contains(user.Roles, "service_user") {
 
-		mlog.Warn("Checking user passord")
+		mlog.Warn("Checking user password")
 
 		servers := strings.Split(*a.Config().LdapSettings.LdapServer, ",")
 
