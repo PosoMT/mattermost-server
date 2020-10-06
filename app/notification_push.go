@@ -367,7 +367,7 @@ func (a *App) sendToPushProxy(msg *model.PushNotification, session *model.Sessio
 		DeliveryChannel: channelAsgdu,
 	}
 
-	url := strings.TrimRight(*a.Config().EmailSettings.PushNotificationServer, "/") + "/messages/notifications"
+	url := strings.TrimRight(*a.Config().EmailSettings.PushNotificationServer, "/") + "/messages/notification"
 
 	request, err := http.NewRequest("POST", url, strings.NewReader(msgAsgdu.ToJson()))
 	if err != nil {
