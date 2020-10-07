@@ -584,7 +584,7 @@ func (u *User) AddNotifyProp(key string, value string) {
 
 func (u *User) GetFullName() string {
 	if len(u.FirstName) > 0 && len(u.LastName) > 0 {
-		return u.FirstName + " " + u.LastName
+		return u.LastName + " " + u.FirstName
 	} else if len(u.FirstName) > 0 {
 		return u.FirstName
 	} else if len(u.LastName) > 0 {
