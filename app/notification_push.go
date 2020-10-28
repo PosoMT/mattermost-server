@@ -401,6 +401,7 @@ func (a *App) sendToPushProxy(msg *model.PushNotification, session *model.Sessio
 		fmt.Println(err)
 	}
 
+	mlog.Info(msgAsgdu.ToJson())
 	mlog.Info("ASGDU status", mlog.String("httpStatus", resp.Status))
 	b, _ := json.Marshal(asgduResponse)
 
