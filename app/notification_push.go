@@ -401,7 +401,7 @@ func (a *App) sendToPushProxy(msg *model.PushNotification, session *model.Sessio
 		fmt.Println(err)
 	}
 
-	mlog.Info(msgAsgdu.ToJson())
+	mlog.Info("Sending push with: " + msgAsgdu.ToJson())
 	mlog.Info("ASGDU status", mlog.String("httpStatus", resp.Status))
 	b, _ := json.Marshal(asgduResponse)
 
@@ -410,8 +410,11 @@ func (a *App) sendToPushProxy(msg *model.PushNotification, session *model.Sessio
 			mlog.String("httpStatus", resp.Status),
 			mlog.String("asgduStatus", string(b)))
 
-		//Remove
-		if asgduResponse.ErrorCode == 59 {
+
+		
+
+		//Remove subscription
+		if (asgduResponse.ErrorCode == 59 || asgduResponse.ErrorCode == 14) {
 			mlog.Info("ASGDU not registered!", mlog.String("httpStatus", resp.Status))
 			a.AttachDeviceId(session.Id, "", session.ExpiresAt)
 			a.ClearSessionCacheForUser(session.UserId)
