@@ -46,7 +46,7 @@ func New(config configservice.ConfigService, globalOptions app.AppOptionCreator,
 // Map should be of minimum required browser version.
 // -1 means that the browser is not supported in any version.
 var browserMinimumSupported = map[string]int{
-	"BrowserIE":     12,
+	"BrowserIE":     10,
 	"BrowserSafari": 12,
 }
 

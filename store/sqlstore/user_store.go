@@ -1393,9 +1393,9 @@ func generateSearchQuery(query sq.SelectBuilder, terms []string, fields []string
 		for _, field := range fields {
 			if isPostgreSQL {
 				//gpbu5784-search trick
-				if field == "LastName" {
+				/*if field == "LastName" {
 					searchFields = append(searchFields, fmt.Sprintf("lower(%%%s%%) LIKE lower(?) escape '*' ", field))	
-				} 
+				} */
 				searchFields = append(searchFields, fmt.Sprintf("lower(%s) LIKE lower(?) escape '*' ", field))
 			} else {
 				searchFields = append(searchFields, fmt.Sprintf("%s LIKE ? escape '*' ", field))

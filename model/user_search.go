@@ -8,7 +8,7 @@ import (
 	"io"
 )
 
-const USER_SEARCH_MAX_LIMIT = 1000
+const USER_SEARCH_MAX_LIMIT = 30000
 const USER_SEARCH_DEFAULT_LIMIT = 100
 
 // UserSearch captures the parameters provided by a client for initiating a user search.
@@ -37,8 +37,10 @@ func (u *UserSearch) ToJson() []byte {
 
 // UserSearchFromJson will decode the input and return a User
 func UserSearchFromJson(data io.Reader) *UserSearch {
+	
 	us := UserSearch{}
 	json.NewDecoder(data).Decode(&us)
+	//mlog.Info("Seach ", mlog.String("limit: ", strconv.Itoa(us.Limit)), mlog.String("term: ", us.Term))
 
 	if us.Limit == 0 {
 		us.Limit = USER_SEARCH_DEFAULT_LIMIT
