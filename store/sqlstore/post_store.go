@@ -649,23 +649,12 @@ func (s *SqlPostStore) GetPostsSince(options model.GetPostsSinceOptions, allowFr
           ORDER BY CreateAt DESC`
 	} else if s.DriverName() == model.DATABASE_DRIVER_POSTGRES {
 		query = `WITH cte AS (SELECT
-		       p.*
+		       *
 		FROM
-			   Posts p
-			   join Channels ch ON ch.id = p.ChannelId 
-		WHERE	
-			   UpdateAt > :Time AND ChannelId = :ChannelId AND ch.Type != 'O'
-		union
-		SELECT
-			p.*
-	 	FROM
-			Posts p
-			join Channels ch ON ch.id = p.ChannelId 
-	 	WHERE	
-			UpdateAt > :Time AND ChannelId = :ChannelId AND ch.Type == 'O'
-			AND p.type not in ('system_join_channel', 'system_leave_channel')
-		LIMIT 1000
-		)
+		       Posts
+		WHERE
+		       UpdateAt > :Time AND ChannelId = :ChannelId
+		       LIMIT 1000)
 		(SELECT *` + replyCountQuery2 + ` FROM cte)
 		UNION
 		(SELECT *` + replyCountQuery1 + ` FROM Posts p1 WHERE id in (SELECT rootid FROM cte))
